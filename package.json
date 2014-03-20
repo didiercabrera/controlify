@@ -1,0 +1,19 @@
+{
+  "name": "controlify",
+  "version": "0.0.1",
+  "description": "A small library providing utility methods to create controllers and notes from text, and send them via OSC",
+  "main": "controlify.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/didiercabrera/controlify.git"
+  },
+  "keywords": [
+    "text",
+    "MIDI",
+    "OSC"
+  ],
+  "author": {
+  	"name":"Didier Cabrera",
+  	"email":"didiercabrera.music@gmail.com"
+  }
+}
