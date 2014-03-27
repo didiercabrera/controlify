@@ -7,6 +7,9 @@
     "type": "git",
     "url": "git://github.com/didiercabrera/controlify.git"
   },
+  "dependencies": {
+    "omgosc": "1.0.0"
+  },
   "keywords": [
     "text",
     "MIDI",

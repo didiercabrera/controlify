@@ -1,8 +1,7 @@
-var osc = require('omgosc');
-var sender = new osc.UdpSender('127.0.0.1', 7777);
 
 var controlify={};
 
+var osc = require('omgosc');
 controlify.defaults=defaults={
 		/*defult values for each controller,based on MIDI CCs*/
 		controllers:{
@@ -11,8 +10,21 @@ controlify.defaults=defaults={
 		},
 		notes:{
 			scale:{"A":57,"A#":58,"B":59,"C":60,"C#":61,"D":62,"D#":63,"E":64,"F":65,"F#":66,"G":67,"G#":68}
-		}
+		},
+		port:7777,
+		host:'127.0.0.1'
 };
+
+var sender = new osc.UdpSender(controlify.defaults.host, controlify.defaults.port);
+
+controlify.OSCreceiver=function(port){
+	return new osc.UdpReceiver(port);
+}
+
+controlify.OSCsender=function(host,port){
+	var sender = new osc.UdpSender(host,port);
+	return sender;
+}
 
 controlify.setProperties=function(properties){
 	/*Set the defaults to be used in this module
@@ -30,17 +42,11 @@ controlify.createControllers=function (text,mods){
 	return a list of all controllers detected in text
 
 	@param text 		: string , text to search
-	@param type 		: string , specific type of controllers to search, all by default
-	@return controllers : object , dictionary of all controllers
-	
-	var text="Play that funky music,and add some delay effect!!";
-	get_all_controllers_from_text(text) -> 
-	
-	{
-		buttons:{play:120},
-		sliders:{delay:104}
-	}
+	@param mods
+		@value type 	: string , specific type of controllers to search, all by default
+		@value velocity : number or string , value of velocity or method to create it
 
+	@return controllers : object , dictionary of all controllers
 	*/
 
 	mods=(mods===undefined)?{}:mods;
@@ -143,12 +149,10 @@ controlify.letterToScaleNote=function(letter,mods){
 	*/
 
 	var octave,type,velocity;
-	if(mods){
-		octave=mods.octave;
-		type=mods.type;
-		velocity=mods.velocity;
-	}
-
+	mods=(mods===undefined)?{}:mods;
+	octave=mods.octave;
+	type=mods.type;
+	velocity=mods.velocity;
 	if(typeof letter==="string"){
 		
 		var indexednote;
@@ -174,6 +178,23 @@ controlify.letterToScaleNote=function(letter,mods){
 		return null;
 	}
 	
+};
+
+controlify.noteToLetter=function(note,mods){
+	mods=(mods===undefined)?{}:mods;
+	var octave;
+
+	if(note>25){
+		octave=1;
+	}
+
+	var letters="abcdefghijklmnopqrstuvwxyz".split("");
+	
+	for (var i = 0;i<5; i++) {
+		letters=letters.concat(letters);
+	};
+	var indexedString=letters[note]
+	return indexedString;
 };
 
 controlify.createChords=function (text,mods) {
@@ -269,13 +290,11 @@ controlify.autoControl=function(cc,mods){
 	
 	var timer=setInterval(function(){		
 		if(min<max){
-			console.log("sending")
 			min++;
 			var values=cc;
 			values[2]=min;
 			sender.send('/osc_control','sii',values);
 		}else{
-			console.log('stop sending',min,cc[1])
 			clearTimeout(timer);
 		}
 	},ms_tempo);
@@ -295,12 +314,12 @@ controlify.sendNote=function(cc,duration){
 	Send Notes
 	@param note : array , note to send
 	*/
-	duration=duration===undefined?500:duration;
+	duration=duration===undefined?0.5:duration;
 	// console.log(duration)
 	if(duration>0){
 		sender.send('/osc_note','sii',['note'].concat(cc));
 		setTimeout(function(){
-			cc[2]=0;
+			cc[1]=0;
 			sender.send('/osc_note','sii',['note'].concat(cc));
 		},duration*1000);
 	}
@@ -314,7 +333,6 @@ controlify.sendChords=function(chords,mods){
 		var timer=setInterval(function(){
 			if(i<finalchord){
 				var chord=chords[i];
-				console.log("chord",chord);
 				for (j in chord){
 					controlify.sendNote(chord[j],mods.duration);	
 				}				
@@ -342,6 +360,7 @@ controlify.sendNotes=function(notes,mods){
 			var note=notes[i];
 			controlify.sendNote(note,mods.duration);	
 			i++;
+			console.log("Sending Note : ",note);
 		}else{
 			clearTimeout(timer);
 		}
@@ -357,6 +376,21 @@ controlify.createTempo=function(tempo){
 	//NOTE: check if sending bpm or speed or duration
 	var ms_tempo=1000/(tempo/60);
 	return ms_tempo
+}
+
+controlify.createText=function(notes,mods){
+	/* Create text from note values
+	*/
+	var text=[];
+	for (i in notes){
+		// var note=notes[i][0];
+		var note=notes[0];		
+		var string=controlify.noteToLetter(note); 
+		text.push(string);
+
+	}
+
+	return text.join("");
 }
 
 function errorWarning(kind,where,parameter,paramType){
